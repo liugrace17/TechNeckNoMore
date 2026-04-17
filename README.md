@@ -1,2 +1,2 @@
 # TechNeckNoMore
-EE75 Capstone project - lightweight posture and health monitor
+EE475 Capstone project - Lightweight posture and health monitor
