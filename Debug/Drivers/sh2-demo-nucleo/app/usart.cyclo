@@ -1,0 +1,6 @@
+../Drivers/sh2-demo-nucleo/app/usart.c:70:6:usartRegisterHandlers	6
+../Drivers/sh2-demo-nucleo/app/usart.c:104:6:usartUnregisterHandlers	4
+../Drivers/sh2-demo-nucleo/app/usart.c:123:6:HAL_UART_TxCpltCallback	4
+../Drivers/sh2-demo-nucleo/app/usart.c:135:6:HAL_UART_RxCpltCallback	4
+../Drivers/sh2-demo-nucleo/app/usart.c:146:6:HAL_UART_ErrorCallback	4
+../Drivers/sh2-demo-nucleo/app/usart.c:160:13:usartInit	1
