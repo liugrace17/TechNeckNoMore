@@ -1,6 +1,0 @@
-../Drivers/sh2-demo-nucleo/rvc/rvc.c:30:5:rvc_init	1
-../Drivers/sh2-demo-nucleo/rvc/rvc.c:40:5:rvc_setCallback	1
-../Drivers/sh2-demo-nucleo/rvc/rvc.c:49:5:rvc_open	1
-../Drivers/sh2-demo-nucleo/rvc/rvc.c:55:6:rvc_close	1
-../Drivers/sh2-demo-nucleo/rvc/rvc.c:65:6:rvc_service	4
-../Drivers/sh2-demo-nucleo/rvc/rvc.c:88:6:rvc_decode	1

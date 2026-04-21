@@ -1,2 +1,0 @@
-../Drivers/sh2-demo-nucleo/app/bno08x_uart_hal.c:27:12:sh2_hal_init	8	static
-../Drivers/sh2-demo-nucleo/app/bno08x_uart_hal.c:33:12:dfu_hal_init	8	static

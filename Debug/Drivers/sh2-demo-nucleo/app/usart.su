@@ -1,6 +1,0 @@
-../Drivers/sh2-demo-nucleo/app/usart.c:70:6:usartRegisterHandlers	32	static
-../Drivers/sh2-demo-nucleo/app/usart.c:104:6:usartUnregisterHandlers	24	static
-../Drivers/sh2-demo-nucleo/app/usart.c:123:6:HAL_UART_TxCpltCallback	24	static
-../Drivers/sh2-demo-nucleo/app/usart.c:135:6:HAL_UART_RxCpltCallback	24	static
-../Drivers/sh2-demo-nucleo/app/usart.c:146:6:HAL_UART_ErrorCallback	24	static
-../Drivers/sh2-demo-nucleo/app/usart.c:160:13:usartInit	8	static
