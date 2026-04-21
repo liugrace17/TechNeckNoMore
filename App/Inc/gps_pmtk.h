@@ -88,6 +88,7 @@
 #define PMTK_LOCUS_STOPLOG "$PMTK185,1*23"  ///< Stop logging data
 #define PMTK_LOCUS_STARTSTOPACK                                                \
   "$PMTK001,185,3*3C" ///< Acknowledge the start or stop command
+#define PMTK_LOCUS_DUMPLOG "$PMTK622,1*29"
 #define PMTK_LOCUS_QUERY_STATUS "$PMTK183*38"  ///< Query the logging status
 #define PMTK_LOCUS_ERASE_FLASH "$PMTK184,1*22" ///< Erase the log flash data
 #define LOCUS_OVERLAP                                                          \
