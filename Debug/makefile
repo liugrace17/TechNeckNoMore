@@ -17,13 +17,11 @@ RM := rm -rf
 -include Middlewares/Third_Party/FreeRTOS/Source/subdir.mk
 -include Middlewares/ST/STM32_USB_Host_Library/Core/Src/subdir.mk
 -include Middlewares/ST/STM32_USB_Host_Library/Class/CDC/Src/subdir.mk
--include Drivers/sh2-demo-nucleo/sh2/subdir.mk
--include Drivers/sh2-demo-nucleo/rvc/subdir.mk
--include Drivers/sh2-demo-nucleo/app/subdir.mk
 -include Drivers/minmea/subdir.mk
 -include Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
+-include App/Src/subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
