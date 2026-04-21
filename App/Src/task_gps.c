@@ -4,3 +4,9 @@
 #include "task.h"
 #include "gps_pmtk.h"
 #include "minmea.h"
+
+void taskGPS(void *pvParameters){
+	while(1){
+
+	}
+}
