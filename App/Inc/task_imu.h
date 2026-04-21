@@ -2,4 +2,4 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
-void taskIMU(void* pvParameters);
+SemaphoreHandle_t btUartMutex;

@@ -1,14 +1,7 @@
+//File: task_imu.c
 #include "main.h"
 #include "task_imu.h"
-#include "FreeRTOS.h"
 #include "task.h"
-
-void taskIMU(void* pvParameters){
-	while (1){
-
-
-		vTaskDelay(pdMS_TO_TICKS(100));
-	}
-}
-
-
+#include "sh2.h"
+#include "sh2_SensorValue.h"
+#include "i2c_hal.h"

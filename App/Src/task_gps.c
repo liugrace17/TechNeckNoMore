@@ -4,11 +4,3 @@
 #include "task.h"
 #include "gps_pmtk.h"
 #include "minmea.h"
-
-void taskGPS(void* pvParameters){
-	while(1){
-
-
-		vTaskDelay(pdMS_TO_TICKS(100));
-	}
-}

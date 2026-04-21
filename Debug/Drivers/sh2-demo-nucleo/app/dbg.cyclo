@@ -1,0 +1,8 @@
+../Drivers/sh2-demo-nucleo/app/dbg.c:36:6:dbg_init	1
+../Drivers/sh2-demo-nucleo/app/dbg.c:59:6:dbg_pulse	2
+../Drivers/sh2-demo-nucleo/app/dbg.c:68:6:dbg_set	1
+../Drivers/sh2-demo-nucleo/app/dbg.c:74:6:dbg_clear	1
+../Drivers/sh2-demo-nucleo/app/dbg.c:88:6:dbg_manchester	5
+../Drivers/sh2-demo-nucleo/app/dbg.c:133:6:dbg2_pulse	2
+../Drivers/sh2-demo-nucleo/app/dbg.c:142:6:dbg2_set	1
+../Drivers/sh2-demo-nucleo/app/dbg.c:148:6:dbg2_clear	1

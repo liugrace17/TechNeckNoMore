@@ -1,0 +1,4 @@
+../Drivers/sh2-demo-nucleo/app/bno08x_i2c_hal.c:37:12:sh2_hal_init_imu1	1
+../Drivers/sh2-demo-nucleo/app/bno08x_i2c_hal.c:42:12:sh2_hal_init_imu2	1
+../Drivers/sh2-demo-nucleo/app/bno08x_i2c_hal.c:47:12:dfu_hal_init_imu1	1
+../Drivers/sh2-demo-nucleo/app/bno08x_i2c_hal.c:52:12:dfu_hal_init_imu2	1

@@ -1,0 +1,11 @@
+../Drivers/sh2-demo-nucleo/app/button.c:30:6:button_init	1
+../Drivers/sh2-demo-nucleo/app/button.c:45:6:button_onUp	1
+../Drivers/sh2-demo-nucleo/app/button.c:49:6:button_onDown	1
+../Drivers/sh2-demo-nucleo/app/button.c:53:6:button_onShort	1
+../Drivers/sh2-demo-nucleo/app/button.c:57:6:button_onLong	1
+../Drivers/sh2-demo-nucleo/app/button.c:61:13:button_read	1
+../Drivers/sh2-demo-nucleo/app/button.c:65:13:_onUp	1
+../Drivers/sh2-demo-nucleo/app/button.c:69:13:_onDown	1
+../Drivers/sh2-demo-nucleo/app/button.c:73:13:_onShort	1
+../Drivers/sh2-demo-nucleo/app/button.c:77:13:_onLong	1
+../Drivers/sh2-demo-nucleo/app/button.c:81:6:button_poll	9
