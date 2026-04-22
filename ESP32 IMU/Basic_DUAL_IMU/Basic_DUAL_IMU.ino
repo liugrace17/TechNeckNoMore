@@ -1,6 +1,9 @@
 #include <SparkFun_BNO080_Arduino_Library.h>
 #include <Wire.h>
 
+#define SDA_PIN 8
+#define SCL_PIN 9
+
 BNO080 imu1;
 BNO080 imu2;
 uint8_t activityConfidences[9];
@@ -9,7 +12,7 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
     
-    Wire.begin(8, 9);
+    Wire.begin(SDA_PIN, SCL_PIN);
     
     if (!imu1.begin(0x4A, Wire)) {
         Serial.println("Failed to find IMU1");
@@ -24,8 +27,8 @@ void setup() {
     Serial.println("IMU2 found");
 
     imu1.enableRotationVector(1000);
-    imu1.enableStepCounter(1000);
-    imu1.enableActivityClassifier(1000, 0x1F, activityConfidences);
+    // imu1.enableStepCounter(1000);
+    // imu1.enableActivityClassifier(1000, 0x1F, activityConfidences);
 
     imu2.enableRotationVector(1000);
 
@@ -65,7 +68,7 @@ void loop() {
         Serial.print(" k:");
         Serial.println(imu1.getQuatK());
 
-        Serial.printf("Steps: %d\n", imu1.getStepCount());
+        // Serial.printf("Steps: %d\n", imu1.getStepCount());
     }
 
     if (imu2.dataAvailable()) {
