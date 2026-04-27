@@ -14,6 +14,10 @@ void turnOnMotor() {
     digitalWrite(MOTOR_PIN, HIGH);
 }
 
+void turnOffMotor() {
+    digitalWrite(MOTOR_PIN, LOW);
+}
+
 void quatToEulerDegrees(float w, float x, float y, float z,
                         float &roll, float &pitch, float &yaw) {
     // Roll (x-axis rotation)
@@ -57,11 +61,16 @@ void setup() {
 
     Wire.begin(SDA_PIN, SCL_PIN);
 
+
+
     if (!imu1.begin(0x4A, Wire)) {
         Serial.println("Failed to find IMU1");
         while (1) delay(10);
     }
     Serial.println("IMU1 found");
+    
+    imu1.enableStepCounter(500); //Send data update every 500ms
+
 
     if (!imu2.begin(0x4B, Wire)) {
         Serial.println("Failed to find IMU2");
@@ -93,6 +102,8 @@ void loop() {
     bool imu2Ready = imu2.dataAvailable();
 
     if (imu1Ready && imu2Ready) {
+        unsigned int steps = imu1.getStepCount();
+        
         float w1 = imu1.getQuatReal();
         float x1 = imu1.getQuatI();
         float y1 = imu1.getQuatJ();
@@ -141,11 +152,15 @@ void loop() {
         Serial.print(yaw2, 2);
         Serial.print(" | Roll Diff:");
         Serial.println(rollDiff, 2);
+        Serial.print(" | Steps:");
+        Serial.println(steps);
 
         if (rollDiff > 30.0f) {
             Serial.println("slouch");
+            turnOnMotor();
         } else {
             Serial.println("straight");
+            turnOffMotor();
         }
 
     } else {
