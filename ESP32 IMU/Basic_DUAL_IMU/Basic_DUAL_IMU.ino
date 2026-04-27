@@ -4,6 +4,7 @@
 
 #define SDA_PIN 8
 #define SCL_PIN 9
+#define MOTOR_PIN 2
 
 BNO080 imu1;
 BNO080 imu2;
@@ -45,6 +46,10 @@ float angleDifferenceDeg(float a, float b) {
 void setup() {
     Serial.begin(115200);
     delay(1000);
+
+    // Setup MOTOR_PIN
+    pinMode(MOTOR_PIN, OUTPUT);
+    digitalWrite(MOTOR_PIN, LOW); // start OFF
 
     Wire.begin(SDA_PIN, SCL_PIN);
 
@@ -145,5 +150,11 @@ void loop() {
         Serial.println();
     }
 
+    // Controlling haptic motor logic 
+    digitalWrite(MOTOR_PIN, HIGH); // motor ON
+    delay(1000);
+
+    digitalWrite(MOTOR_PIN, LOW);  // motor OFF
+    delay(1000);
     delay(100);
 }
