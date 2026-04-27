@@ -10,6 +10,10 @@ BNO080 imu1;
 BNO080 imu2;
 uint8_t activityConfidences[9];
 
+void turnOnMotor() {
+    digitalWrite(MOTOR_PIN, HIGH);
+}
+
 void quatToEulerDegrees(float w, float x, float y, float z,
                         float &roll, float &pitch, float &yaw) {
     // Roll (x-axis rotation)
@@ -149,12 +153,6 @@ void loop() {
         if (!imu2Ready) Serial.print("IMU2 not ready ");
         Serial.println();
     }
-
-    // Controlling haptic motor logic 
-    digitalWrite(MOTOR_PIN, HIGH); // motor ON
-    delay(1000);
-
-    digitalWrite(MOTOR_PIN, LOW);  // motor OFF
-    delay(1000);
+    
     delay(100);
 }
