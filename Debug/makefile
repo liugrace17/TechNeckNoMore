@@ -70,8 +70,8 @@ all: main-build
 main-build: TechNeck.elf secondary-outputs
 
 # Tool invocations
-TechNeck.elf TechNeck.map: $(OBJS) $(USER_OBJS) /Users/tml1006/UW\ Work/475/TechNeck/STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "TechNeck.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/tml1006/UW Work/475/TechNeck/STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="TechNeck.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+TechNeck.elf TechNeck.map: $(OBJS) $(USER_OBJS) C:\475\TechNeck\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "TechNeck.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\475\TechNeck\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="TechNeck.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

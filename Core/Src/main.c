@@ -156,8 +156,8 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  xTaskCreate(taskIMU, "Manages IMU data Tx", 16384, NULL, 1, &imuTask);
-  xTaskCreate(taskGPS, "Manages GPS Rx and Tx", 16384, NULL, 1, &gpsTask);
+  xTaskCreate(taskIMU, "IMU Task", 16384, NULL, 1, &imuTask);
+  xTaskCreate(taskGPS, "GPS Task", 16384, NULL, 1, &gpsTask);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
