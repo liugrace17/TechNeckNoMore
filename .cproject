@@ -309,10 +309,10 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="App"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="USB_HOST"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry excluding="minmea/compat|minmea/README.md|minmea/LICENSE.MIT|minmea/LICENSE.LGPL-3.0|minmea/LICENSE.grants|minmea/CMakeLists.txt|minmea/COPYING|minmea/tests.c|minmea/example.c|sh2-demo-nucleo/app/spi_hal.c|sh2-demo-nucleo/app/fsp20x_uart_hal.c|sh2-demo-nucleo/app/fsp201_i2c_hal.c|sh2-demo-nucleo/main|sh2-demo-nucleo/app/uart_hal.c|sh2-demo-nucleo/app/cal_app.c|sh2-demo-nucleo/app/demo_app.c|sh2-demo-nucleo/Drivers|sh2-demo-nucleo/app/console.c|sh2-demo-nucleo/app/demo_rvc.c|sh2-demo-nucleo/main/startup_stm32f411xe.s|sh2-demo-nucleo/dfu|sh2-demo-nucleo/rvc/rvc_hal.c|sh2-demo-nucleo/main/main.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="USB_HOST"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

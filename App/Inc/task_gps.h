@@ -8,13 +8,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define GPS_BUF_RX_SIZE 96
+
+extern SemaphoreHandle_t btMutex;
+extern TaskHandle_t gpsTask;
+
 void taskGPS(void *pvParameters);
 
-void gpsInit(void);
+void gpsInit();
 void sendCommand(const char *cmd);
 
-void startLogging(void);
-void stopLogging(void);
-void dumpLogs(void);
+void startLogging();
+void stopLogging();
+void dumpLogs();
 
 #endif // TASK_GPS_H

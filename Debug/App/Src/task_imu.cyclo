@@ -1,1 +1,3 @@
-../App/Src/task_imu.c:6:6:taskIMU	1
+../App/Src/task_imu.c:10:6:taskIMU	2
+../App/Src/task_imu.c:26:6:HAL_UART_RxCpltCallback	3
+../App/Src/task_imu.c:36:6:verifyCheckSum	2

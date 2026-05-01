@@ -7,25 +7,32 @@
 #include <string.h>
 #include "minmea.h"
 
-#define GPS_BUF_RX_SIZE 128
-static uint8_t gpsRxBuf[GPS_BUF_RX_SIZE];
+uint8_t gpsRxBuf[GPS_BUF_RX_SIZE];
 // Need to track how many characters passed
 
-static char gpsSentence[GPS_BUF_RX_SIZE];
-static uint16_t gpsSentenceIndex = 0;
+//static char gpsSentence[GPS_BUF_RX_SIZE];
+//static uint16_t gpsSentenceIndex = 0;
 extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart3;
 
-static void gpsProcessByte(uint8_t ch);
-static bool gpsIsRmcSentence(const char *sentence);
+//static void gpsProcessByte(uint8_t ch);
+//static bool gpsIsRmcSentence(const char *sentence);
 
 void taskGPS(void *pvParameters){
-	vTaskDelay(pdMS_TO_TICKS(100));
+	//vTaskDelay(pdMS_TO_TICKS(100));
+	HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(USART2_IRQn);
+	__HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
+	HAL_UART_Receive_DMA(&huart2, gpsRxBuf, GPS_BUF_RX_SIZE);
 	gpsInit();
-	uint8_t ch;
+	//uint8_t ch;
     while(1){
-        HAL_UART_Receive(&huart2, &ch, 1, HAL_MAX_DELAY);
-        gpsProcessByte(ch);
+    	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    	xSemaphoreTake(btMutex, portMAX_DELAY);
+    	HAL_UART_Transmit(&huart3, gpsRxBuf, GPS_BUF_RX_SIZE, 100);
+    	xSemaphoreGive(btMutex);
+
 	}
 }
 
@@ -34,7 +41,7 @@ void sendCommand(const char *cmd){
 }
 
 
-static void gpsProcessByte(uint8_t ch) {
+/*static void gpsProcessByte(uint8_t ch) {
     if (gpsSentenceIndex >= GPS_BUF_RX_SIZE - 1) {
         gpsSentenceIndex = 0;
         memset(gpsSentence, 0, GPS_BUF_RX_SIZE);
@@ -59,9 +66,9 @@ static void gpsProcessByte(uint8_t ch) {
 
     gpsSentenceIndex = 0;
     memset(gpsSentence, 0, GPS_BUF_RX_SIZE);
-}
+}*/
 
-static bool gpsIsRmcSentence(const char *sentence) {
+/*static bool gpsIsRmcSentence(const char *sentence) {
 	if (sentence == NULL) {
 		return false;
 	}
@@ -70,7 +77,7 @@ static bool gpsIsRmcSentence(const char *sentence) {
 	} else {
 		return false;
 	}
-}
+}*/
 
 void gpsInit(){
 	sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);

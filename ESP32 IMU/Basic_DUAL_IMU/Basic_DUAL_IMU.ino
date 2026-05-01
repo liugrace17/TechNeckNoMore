@@ -6,9 +6,39 @@
 #define SCL_PIN 9
 #define MOTOR_PIN 2
 
+#define WALK_ID 6
+#define IDLE_ID 4
+
+#define LAST_TX_INTERVAL 1000
+
 BNO080 imu1;
 BNO080 imu2;
+
 uint8_t activityConfidences[9];
+
+typedef struct {
+    uint8_t start;
+    uint8_t id; 
+    bool goodPos;
+    uint8_t activityType;
+    uint32_t idleTime;
+    uint32_t walkingTime;
+    uint32_t goodPosCount;
+    uint32_t badPosCount; 
+    uint16_t steps;
+    uint8_t checksum;
+} __attribute__ ((packed)) imuMsg;
+
+imuMsg msg; 
+
+uint32_t idleTime, startIdle, walkTime, startWalk, goodCount, badCount; 
+uint16_t steps;
+uint8_t activityType, priorActivity, checkSum; 
+bool goodPos; 
+
+static unsigned long lastTx = 0;
+
+HardwareSerial uart(2);
 
 void turnOnMotor() {
     digitalWrite(MOTOR_PIN, HIGH);
@@ -17,6 +47,8 @@ void turnOnMotor() {
 void turnOffMotor() {
     digitalWrite(MOTOR_PIN, LOW);
 }
+
+void computeImuCS(imuMsg *compute);
 
 void quatToEulerDegrees(float w, float x, float y, float z,
                         float &roll, float &pitch, float &yaw) {
@@ -53,6 +85,7 @@ float angleDifferenceDeg(float a, float b) {
 
 void setup() {
     Serial.begin(115200);
+    uart.begin(115200, SERIAL_8N1, 16, 17);
     delay(1000);
 
     // Setup MOTOR_PIN
@@ -68,8 +101,6 @@ void setup() {
         while (1) delay(10);
     }
     Serial.println("IMU1 found");
-    
-    imu1.enableStepCounter(500); //Send data update every 500ms
 
 
     if (!imu2.begin(0x4B, Wire)) {
@@ -81,9 +112,23 @@ void setup() {
     imu1.enableRotationVector(20);
     imu2.enableRotationVector(20);
 
+    imu1.enableStepCounter(500); //Send data update every 500ms
+
+    imu1.enableActivityClassifier(50, 0x1F, activityConfidences);
+
+    msg.start = 0xFF;
+    msg.id = 1;
+
+    steps = 0;
+    goodCount = 0;
+    badCount = 0;
+    walkTime = 0;
+    idleTime = 0;
+    goodPos = false;
+
     Serial.println("Setup complete");
 }
-
+/*
 void translateActivity(uint8_t state) {
     switch (state) {
         case 1: Serial.print("In Vehicle"); break;
@@ -95,14 +140,13 @@ void translateActivity(uint8_t state) {
         case 7: Serial.print("Running"); break;
         case 8: Serial.print("On Stairs"); break;
     }
-}
+}*/
 
 void loop() {
     bool imu1Ready = imu1.dataAvailable();
     bool imu2Ready = imu2.dataAvailable();
 
     if (imu1Ready && imu2Ready) {
-        unsigned int steps = imu1.getStepCount();
         
         float w1 = imu1.getQuatReal();
         float x1 = imu1.getQuatI();
@@ -121,7 +165,7 @@ void loop() {
         quatToEulerDegrees(w2, x2, y2, z2, roll2, pitch2, yaw2);
 
         float rollDiff = angleDifferenceDeg(roll1, roll2);
-
+        /*
         Serial.print("IMU1 Quat r:");
         Serial.print(w1, 4);
         Serial.print(" i:");
@@ -153,14 +197,56 @@ void loop() {
         Serial.print(" | Roll Diff:");
         Serial.println(rollDiff, 2);
         Serial.print(" | Steps:");
-        Serial.println(steps);
+        Serial.println(steps);*/
 
         if (rollDiff > 30.0f) {
-            Serial.println("slouch");
+            //Serial.println("slouch");
+            badCount++; 
+            goodPos = false;
             turnOnMotor();
         } else {
-            Serial.println("straight");
+            //Serial.println("straight");
+            goodCount++; 
+            goodPos = true;
             turnOffMotor();
+        }
+
+        steps = imu1.getStepCount();
+        activityType = imu1.getActivityClassifier();
+
+        if(activityType == WALK_ID){
+            if (priorActivity != WALK_ID){
+                startWalk = millis();
+            } else if(priorActivity == WALK_ID){
+                walkTime += (millis() - startWalk);
+                startWalk = millis();
+            }
+            priorActivity = WALK_ID;
+        } else if(activityType == IDLE_ID){
+            if (priorActivity != IDLE_ID){
+                startIdle = millis();
+            } else if(priorActivity == IDLE_ID){
+                idleTime += (millis() - startIdle);
+                startIdle = millis();
+            }
+            priorActivity = IDLE_ID;
+        } else{
+            priorActivity = activityType;
+        }
+
+        //Send the struct over hardware serial.
+        if (millis() - lastTx >= LAST_TX_INTERVAL){
+            msg.activityType = activityType;
+            msg.badPosCount = badCount;
+            msg.goodPosCount = goodCount;
+            msg.idleTime = idleTime;
+            msg.walkingTime = walkTime; 
+            msg.steps = steps;
+            msg.goodPos = goodPos; 
+            computeImuCS((imuMsg *) &msg);
+            uart.write((uint8_t *)&msg, sizeof(msg));
+            Serial.println("IMU packet transmitted!");
+            lastTx = millis();
         }
 
     } else {
@@ -170,4 +256,14 @@ void loop() {
     }
     
     delay(100);
+}
+
+void computeImuCS(imuMsg* compute){
+    uint8_t cs = 0;
+
+    int i;
+    for (i = 1; i < sizeof(*compute) - 1; i++){
+        cs ^= ((uint8_t *) compute)[i];
+    }
+    compute->checksum = cs;
 }

@@ -1,1 +1,6 @@
-../App/Src/task_gps.c:8:6:taskGPS	16	static
+../App/Src/task_gps.c:21:6:taskGPS	16	static
+../App/Src/task_gps.c:39:6:sendCommand	16	static
+../App/Src/task_gps.c:82:6:gpsInit	8	static
+../App/Src/task_gps.c:92:6:startLogging	8	static
+../App/Src/task_gps.c:97:6:stopLogging	8	static
+../App/Src/task_gps.c:103:6:dumpLogs	8	static
