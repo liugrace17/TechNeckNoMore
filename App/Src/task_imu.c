@@ -48,6 +48,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART1)
     {
         HAL_UART_AbortReceive(&huart1);
+        HAL_UART_DeInit(&huart1);
+        HAL_UART_Init(&huart1);
         HAL_UART_Receive_DMA(&huart1, imuData, RX_BUF_SIZE);
     }
     if (huart->Instance == USART3)
