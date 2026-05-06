@@ -3,7 +3,7 @@
 #include "task_imu.h"
 #include "task.h"
 
-#define RX_BUF_SIZE 23
+#define RX_BUF_SIZE 22
 
 static uint8_t imuData[RX_BUF_SIZE];
 
@@ -41,4 +41,18 @@ bool verifyCheckSum(uint8_t* imuData){
 	}
 
 	return (cs == imuData[RX_BUF_SIZE-1]);
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART1)
+    {
+        HAL_UART_AbortReceive(&huart1);
+        HAL_UART_Receive_DMA(&huart1, imuData, RX_BUF_SIZE);
+    }
+    if (huart->Instance == USART3)
+    {
+        HAL_UART_DeInit(&huart3);
+        HAL_UART_Init(&huart3);
+    }
 }

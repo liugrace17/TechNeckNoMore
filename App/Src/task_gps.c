@@ -19,12 +19,12 @@ extern UART_HandleTypeDef huart3;
 //static bool gpsIsRmcSentence(const char *sentence);
 
 void taskGPS(void *pvParameters){
-	//vTaskDelay(pdMS_TO_TICKS(100));
 	HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
 	HAL_NVIC_EnableIRQ(USART2_IRQn);
+	vTaskDelay(pdMS_TO_TICKS(1000));
+	gpsInit();
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
 	HAL_UART_Receive_DMA(&huart2, gpsRxBuf, GPS_BUF_RX_SIZE);
-	gpsInit();
 	//uint8_t ch;
     while(1){
     	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -33,11 +33,13 @@ void taskGPS(void *pvParameters){
     	HAL_UART_Transmit(&huart3, gpsRxBuf, GPS_BUF_RX_SIZE, 100);
     	xSemaphoreGive(btMutex);
 
+
 	}
 }
 
 void sendCommand(const char *cmd){
     HAL_UART_Transmit(&huart2, (uint8_t *)cmd, strlen(cmd), 100);
+    HAL_UART_Transmit(&huart2, (uint8_t *)"\r\n", 2, 100);
 }
 
 
@@ -80,12 +82,10 @@ void sendCommand(const char *cmd){
 }*/
 
 void gpsInit(){
-	sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
+    sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
     vTaskDelay(pdMS_TO_TICKS(100));
-	sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
+    sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
     vTaskDelay(pdMS_TO_TICKS(100));
-//	sendCommand(PMTK_LOCUS_ERASE_FLASH);
-
 }
 
 //Tells the GPS to start logging data due to lost bluetooth connection

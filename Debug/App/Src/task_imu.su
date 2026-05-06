@@ -1,3 +1,4 @@
 ../App/Src/task_imu.c:10:6:taskIMU	16	static
 ../App/Src/task_imu.c:26:6:HAL_UART_RxCpltCallback	24	static,ignoring_inline_asm
 ../App/Src/task_imu.c:36:6:verifyCheckSum	24	static
+../App/Src/task_imu.c:46:6:HAL_UART_ErrorCallback	16	static

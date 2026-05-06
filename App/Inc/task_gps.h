@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define GPS_BUF_RX_SIZE 96
+#define GPS_BUF_RX_SIZE 85
 
 extern SemaphoreHandle_t btMutex;
 extern TaskHandle_t gpsTask;
