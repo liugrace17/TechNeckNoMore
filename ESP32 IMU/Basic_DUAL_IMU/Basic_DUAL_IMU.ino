@@ -6,119 +6,129 @@
 #define SCL_PIN 9
 #define MOTOR_PIN 2
 
-#define WALK_ID 6
-#define RUN_ID 7
-#define STAIRS_ID 8
-#define IDLE_ID 4
-
-#define LAST_TX_INTERVAL 750
-#define IMU_STUCK_THRESHOLD 5
+#define SLOUCH_THRESHOLD_DEG 30.0f
+#define IMU_PERIOD_MS        20
+#define DEBOUNCE_SAMPLES     12   // 12 * 20ms = ~240ms of continuous slouch before buzz
+#define PRINT_EVERY_N        5    // print readings every Nth sample (5 * 20ms = ~100ms)
 
 BNO080 imu1;
 BNO080 imu2;
 
-uint8_t activityConfidences[9];
+struct PostureSample {
+    float    roll1, pitch1, yaw1;
+    float    roll2, pitch2, yaw2;
+    float    rollDiff;
+    uint32_t steps;
+};
 
-typedef struct {
-    uint8_t start;
-    bool goodPos;
-    uint8_t activityType;
-    uint32_t idleTime;
-    uint32_t activeTime;
-    uint32_t goodPosCount;
-    uint32_t badPosCount;
-    uint16_t steps;
-    uint8_t checksum;
-} __attribute__((packed)) imuMsg;
+static QueueHandle_t postureQueue;
 
-imuMsg msg;
+static void turnOnMotor()  { digitalWrite(MOTOR_PIN, HIGH); }
+static void turnOffMotor() { digitalWrite(MOTOR_PIN, LOW);  }
 
-uint32_t idleTime, startIdle, activeTime, startActive, goodCount, badCount;
-uint16_t steps, stepOffset, lastReportedSteps;
-uint8_t activityType, priorActivity;
-bool goodPos;
-
-static unsigned long lastTx = 0;
-static int notReadyCount = 0;
-
-HardwareSerial uart(Serial2);
-
-void turnOnMotor()  { digitalWrite(MOTOR_PIN, HIGH); }
-void turnOffMotor() { digitalWrite(MOTOR_PIN, LOW);  }
-
-void computeImuCS(imuMsg *compute);
-
-void enableReports() {
-    imu1.enableRotationVector(15);
-    imu1.enableStepCounter(200);
-    imu1.enableActivityClassifier(50, 0x1F, activityConfidences);
-    imu2.enableRotationVector(15);
-}
-
-void resetI2C() {
-    unsigned long time = millis();
-    Serial.println("Resetting I2C bus...");
-    Wire.end();
-    delay(50);
-    Wire.begin(SDA_PIN, SCL_PIN);
-    delay(50);
-    imu1.begin(0x4A, Wire);
-    imu2.begin(0x4B, Wire);
-    enableReports();
-    notReadyCount = 0;
-    Serial.printf("Took %lu ms\n", millis() - time);
-    Serial.println("I2C reset complete");
-}
-
-void quatToEulerDegrees(float w, float x, float y, float z,
-                        float &roll, float &pitch, float &yaw) {
-    // Roll (x-axis rotation)
+static void quatToEulerDegrees(float w, float x, float y, float z,
+                               float &roll, float &pitch, float &yaw) {
     float sinr_cosp = 2.0f * (w * x + y * z);
     float cosr_cosp = 1.0f - 2.0f * (x * x + y * y);
     roll = atan2(sinr_cosp, cosr_cosp);
 
-    // Pitch (y-axis rotation)
     float sinp = 2.0f * (w * y - z * x);
     sinp = constrain(sinp, -1.0f, 1.0f);
     pitch = asin(sinp);
 
-    // Yaw (z-axis rotation)
     float siny_cosp = 2.0f * (w * z + x * y);
     float cosy_cosp = 1.0f - 2.0f * (y * y + z * z);
     yaw = atan2(siny_cosp, cosy_cosp);
 
-    // Convert radians to degrees
     roll  *= 180.0f / PI;
     pitch *= 180.0f / PI;
     yaw   *= 180.0f / PI;
 }
 
-// Returns the smallest difference between two angles in degrees
-float angleDifferenceDeg(float a, float b) {
+static float angleDifferenceDeg(float a, float b) {
     float diff = a - b;
     while (diff >  180.0f) diff -= 360.0f;
     while (diff < -180.0f) diff += 360.0f;
     return fabs(diff);
 }
 
-/*
-void translateActivity(uint8_t state) {
-    switch (state) {
-        case 1: Serial.print("In Vehicle"); break;
-        case 2: Serial.print("Biking"); break;
-        case 3: Serial.print("On Foot"); break;
-        case 4: Serial.print("Still"); break;
-        case 5: Serial.print("Tilting"); break;
-        case 6: Serial.print("Walking"); break;
-        case 7: Serial.print("Running"); break;
-        case 8: Serial.print("On Stairs"); break;
+// Polls both IMUs at the BNO080 rotation-vector report rate, computes the
+// roll difference, and posts the latest sample to postureQueue.
+// Owns the shared Wire bus — no other task touches I2C.
+static void imuTask(void *arg) {
+    const TickType_t period = pdMS_TO_TICKS(IMU_PERIOD_MS);
+    TickType_t lastWake = xTaskGetTickCount();
+
+    for (;;) {
+        if (imu1.dataAvailable() && imu2.dataAvailable()) {
+            PostureSample s;
+            quatToEulerDegrees(imu1.getQuatReal(), imu1.getQuatI(),
+                               imu1.getQuatJ(),    imu1.getQuatK(),
+                               s.roll1, s.pitch1, s.yaw1);
+            quatToEulerDegrees(imu2.getQuatReal(), imu2.getQuatI(),
+                               imu2.getQuatJ(),    imu2.getQuatK(),
+                               s.roll2, s.pitch2, s.yaw2);
+            s.rollDiff = angleDifferenceDeg(s.roll1, s.roll2);
+            s.steps    = imu1.getStepCount();
+            xQueueOverwrite(postureQueue, &s);   // latest-wins, never blocks
+        } else if (!imu1.dataAvailable() && !imu2.dataAvailable()) {
+            Serial.println("BOTH BROKE");
+        } else if (!imu1.dataAvailable()) {
+            Serial.println("only imu1 broke");
+        } else if (!imu2.dataAvailable()) {
+            Serial.println("only imu2 broke");
+        }
+        vTaskDelayUntil(&lastWake, period);
     }
 }
-*/
+
+// Consumes posture samples, applies hysteresis so a brief lean doesn't buzz,
+// and drives the motor + serial output only on state changes.
+static void postureTask(void *arg) {
+    PostureSample s;
+    int      slouchCount = 0;
+    int      printCount  = 0;
+    bool     buzzing     = false;
+    uint32_t lastSteps   = 0;
+
+    for (;;) {
+        if (xQueueReceive(postureQueue, &s, portMAX_DELAY) != pdTRUE) continue;
+
+        if (s.rollDiff > SLOUCH_THRESHOLD_DEG) {
+            if (slouchCount < DEBOUNCE_SAMPLES) slouchCount++;
+        } else {
+            slouchCount = 0;
+        }
+
+        bool shouldBuzz = (slouchCount >= DEBOUNCE_SAMPLES);
+        if (shouldBuzz != buzzing) {
+            buzzing = shouldBuzz;
+            if (buzzing) turnOnMotor();
+            else         turnOffMotor();
+        }
+
+        if (++printCount >= PRINT_EVERY_N) {
+            printCount = 0;
+            Serial.print("IMU1 R:"); Serial.print(s.roll1, 1);
+            Serial.print(" P:");     Serial.print(s.pitch1, 1);
+            Serial.print(" Y:");     Serial.print(s.yaw1, 1);
+            Serial.print(" | IMU2 R:"); Serial.print(s.roll2, 1);
+            Serial.print(" P:");        Serial.print(s.pitch2, 1);
+            Serial.print(" Y:");        Serial.print(s.yaw2, 1);
+            Serial.print(" | dR:");     Serial.print(s.rollDiff, 1);
+            Serial.print(" | ");        Serial.println(buzzing ? "SLOUCH" : "straight");
+        }
+
+        if (s.steps != lastSteps) {
+            lastSteps = s.steps;
+            Serial.print("steps=");
+            Serial.println(s.steps);
+        }
+    }
+}
 
 void setup() {
     Serial.begin(115200);
-    uart.begin(115200, SERIAL_8N1, 13, 12);
     delay(1000);
 
     pinMode(MOTOR_PIN, OUTPUT);
@@ -126,195 +136,37 @@ void setup() {
 
     Wire.begin(SDA_PIN, SCL_PIN);
 
-    if (!imu1.begin(0x4A, Wire)) {
-        Serial.println("Failed to find IMU1");
-        while (1) delay(10);
+    while (!imu1.begin(0x4A, Wire)) {
+        Serial.println("IMU1 (0x4A) not found, retrying...");
+        delay(500);
     }
     Serial.println("IMU1 found");
+    imu1.enableStepCounter(500);
 
-    if (!imu2.begin(0x4B, Wire)) {
-        Serial.println("Failed to find IMU2");
-        while (1) delay(10);
+    while (!imu2.begin(0x4B, Wire)) {
+        Serial.println("IMU2 (0x4B) not found, retrying...");
+        delay(500);
     }
     Serial.println("IMU2 found");
 
-    enableReports();
+    imu1.enableRotationVector(IMU_PERIOD_MS);
+    imu2.enableRotationVector(IMU_PERIOD_MS);
 
-    msg.start = 0xFF;
-    steps = 0;
-    stepOffset = 0;
-    lastReportedSteps = 0;
-    goodCount = 0;
-    badCount = 0;
-    activeTime = 0;
-    idleTime = 0;
-    goodPos = false;
-    priorActivity = 0;
+    postureQueue = xQueueCreate(1, sizeof(PostureSample));
+    if (postureQueue == NULL) {
+        Serial.println("Failed to create postureQueue");
+        while (1) delay(10);
+    }
+
+    // Both tasks pinned to core 1 (same core as Arduino's loopTask) so I2C
+    // and motor GPIO stay on one core. Core 0 is left for WiFi/BT stack.
+    xTaskCreatePinnedToCore(imuTask,     "imu",     4096, NULL, 3, NULL, 1);
+    xTaskCreatePinnedToCore(postureTask, "posture", 2048, NULL, 2, NULL, 1);
 
     Serial.println("Setup complete");
 }
 
 void loop() {
-    // Check for IMU resets and re-enable reports
-    if (imu1.hasReset()) {
-        Serial.println("IMU1 reset detected");
-        enableReports();
-    }
-    if (imu2.hasReset()) {
-        Serial.println("IMU2 reset detected");
-        enableReports();
-    }
-
-    bool imu1Ready = imu1.dataAvailable();
-    bool imu2Ready = imu2.dataAvailable();
-
-    // Prevent infinite loop of imu1 not ready
-    if (!imu1Ready) {
-        notReadyCount++;
-       //Serial.println("IMU1 not ready ");
-        if (notReadyCount >= IMU_STUCK_THRESHOLD) {
-            resetI2C();
-        }
-        delay(50);
-        return;
-    }
-    notReadyCount = 0;
-
-    // Get IMU1 data
-    float w1 = imu1.getQuatReal();
-    float x1 = imu1.getQuatI();
-    float y1 = imu1.getQuatJ();
-    float z1 = imu1.getQuatK();
-
-    // Step count to offset the resetting of reports
-    uint16_t reportSteps = imu1.getStepCount();
-    if (reportSteps < lastReportedSteps) {
-        stepOffset += lastReportedSteps;
-    }
-    lastReportedSteps = reportSteps;
-    steps = stepOffset + reportSteps;
-
-    activityType = imu1.getActivityClassifier();
-
-    // Get IMU2 data if ready
-    float w2, x2, y2, z2;
-    if (imu2Ready) {
-        w2 = imu2.getQuatReal();
-        x2 = imu2.getQuatI();
-        y2 = imu2.getQuatJ();
-        z2 = imu2.getQuatK();
-    } else {
-        //Serial.println("IMU2 not ready ");
-        delay(50);
-        return;
-    }
-
-    float roll1, pitch1, yaw1;
-    float roll2, pitch2, yaw2;
-
-    quatToEulerDegrees(w1, x1, y1, z1, roll1, pitch1, yaw1);
-    quatToEulerDegrees(w2, x2, y2, z2, roll2, pitch2, yaw2);
-
-    float rollDiff = angleDifferenceDeg(roll1, roll2);
-
-    /*
-    Serial.print("IMU1 Quat r:");
-    Serial.print(w1, 4);
-    Serial.print(" i:");
-    Serial.print(x1, 4);
-    Serial.print(" j:");
-    Serial.print(y1, 4);
-    Serial.print(" k:");
-    Serial.print(z1, 4);
-    Serial.print(" | Roll:");
-    Serial.print(roll1, 2);
-    Serial.print(" Pitch:");
-    Serial.print(pitch1, 2);
-    Serial.print(" Yaw:");
-    Serial.print(yaw1, 2);
-    Serial.print(" || IMU2 Quat r:");
-    Serial.print(w2, 4);
-    Serial.print(" i:");
-    Serial.print(x2, 4);
-    Serial.print(" j:");
-    Serial.print(y2, 4);
-    Serial.print(" k:");
-    Serial.print(z2, 4);
-    Serial.print(" | Roll:");
-    Serial.print(roll2, 2);
-    Serial.print(" Pitch:");
-    Serial.print(pitch2, 2);
-    Serial.print(" Yaw:");
-    Serial.print(yaw2, 2);
-    Serial.print(" | Roll Diff:");
-    Serial.println(rollDiff, 2);
-    Serial.print(" | Steps:");
-    Serial.println(steps);
-    */
-
-    if (rollDiff > 30.0f) {
-        Serial.println("slouch");
-        badCount++;
-        goodPos = false;
-        //turnOnMotor();
-    } else {
-        // Serial.println("straight");
-        goodCount++;
-        goodPos = true;
-        //turnOffMotor();
-    }
-
-    // Activity timing
-    bool isActive = (activityType == WALK_ID ||
-                     activityType == RUN_ID  ||
-                     activityType == STAIRS_ID);
-    bool wasActive = (priorActivity == WALK_ID ||
-                      priorActivity == RUN_ID  ||
-                      priorActivity == STAIRS_ID);
-
-    if (isActive) {
-        if (!wasActive) {
-            startActive = millis();
-        } else {
-            activeTime += millis() - startActive;
-            startActive = millis();
-        }
-        idleTime = 0;
-        priorActivity = activityType;
-    } else if (activityType == IDLE_ID) {
-        if (priorActivity != IDLE_ID) {
-            startIdle = millis();
-        } else {
-            idleTime += millis() - startIdle;
-            startIdle = millis();
-        }
-        priorActivity = IDLE_ID;
-    } else {
-        idleTime = 0;
-        priorActivity = activityType;
-    }
-
-    // Transmit packet once per second
-    if (millis() - lastTx >= LAST_TX_INTERVAL) {
-        msg.activityType  = activityType;
-        msg.badPosCount   = badCount;
-        msg.goodPosCount  = goodCount;
-        msg.idleTime      = idleTime;
-        msg.activeTime    = activeTime;
-        msg.steps         = steps;
-        msg.goodPos       = goodPos;
-        computeImuCS(&msg);
-        uart.write((uint8_t *)&msg, sizeof(msg));
-        Serial.println("IMU packet transmitted");
-        lastTx = millis();
-    }
-
-    delay(75);
-}
-
-void computeImuCS(imuMsg* compute) {
-    uint8_t cs = 0;
-    for (int i = 1; i < (int)sizeof(*compute) - 1; i++)
-        cs ^= ((uint8_t *)compute)[i];
-    compute->checksum = cs;
+    // All work happens in the tasks above; kill the default loopTask.
+    vTaskDelete(NULL);
 }
