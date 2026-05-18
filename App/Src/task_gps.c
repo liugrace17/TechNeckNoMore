@@ -36,25 +36,34 @@ static void gpsHandleFixStatus(const char *sentence)
     }
 
     if (rmc.valid) {
-        gpsWasLogging = true;
         gpsEverHadFix = true;
-        startLogging();
+        if (!gpsWasLogging) {
+            btSend("GPS_FIX_VALID_START_LOGGING\r\n");
+            startLogging();
+            gpsWasLogging = true;
+        }
     } else {
-    	stopLogging();
-    	if(gpsWasLogging == true) {
-    		dumpLogs();
+    	if(gpsWasLogging) {
+            btSend("GPS_FIX_INVALID_STOP_LOGGING\r\n");
+        	stopLogging();
     		gpsWasLogging = false;
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            if (gpsEverHadFix) {
+                dumpLogs();
+            }
     	}
     }
 }
-void taskGPS(void *pvParameters){
-	vTaskDelay(pdMS_TO_TICKS(100));
-	gpsInit();
-	uint8_t ch;
-    while(1){
-        HAL_UART_Receive(&huart3, &ch, 1, HAL_MAX_DELAY);
-        gpsProcessByte(ch);
-	}
+void taskGPS(void *pvParameters) {
+    vTaskDelay(pdMS_TO_TICKS(100));
+    gpsInit();
+    btSend("GPS_TASK_STARTED\r\n");
+    uint8_t ch;
+    while (1) {
+        if (HAL_UART_Receive(&huart3, &ch, 1, HAL_MAX_DELAY) == HAL_OK) {
+            gpsProcessByte(ch);
+        }
+    }
 }
 
 void sendCommand(const char *cmd){
@@ -84,6 +93,7 @@ static void gpsProcessByte(uint8_t ch) {
         strncpy((char *)latest_gps_line, gpsSentence, GPS_BUF_RX_SIZE - 1);
         latest_gps_line[GPS_BUF_RX_SIZE - 1] = '\0';
         latest_gps_line_ready = 1;
+        gpsHandleFixStatus(gpsSentence);
         volatile int gpsRmcDetected = 1;
         (void)gpsRmcDetected;
     }
@@ -123,7 +133,7 @@ void stopLogging(){
 }
 
 void btSend(const char *msg) {
-    HAL_UART_Transmit(&huart2, (uint8_t *)cmd, strlen(cmd), 100);
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 100);
 }
 
 //Grabs all logged data and sends it over bluetooth
