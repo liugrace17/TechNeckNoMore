@@ -18,11 +18,11 @@ static uint16_t gpsSentenceIndex = 0;
 volatile char latest_gps_line[GPS_BUF_RX_SIZE];
 volatile uint8_t latest_gps_line_ready = 0;
 
-extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart3;
 static bool gpsWasLogging = false;
 static bool gpsEverHadFix = false;
-static void btSend(const char *msg);
+static void piSend(const char *msg);
 static void gpsProcessByte(uint8_t ch);
 static bool gpsIsRmcSentence(const char *sentence);
 
@@ -38,13 +38,13 @@ static void gpsHandleFixStatus(const char *sentence)
     if (rmc.valid) {
         gpsEverHadFix = true;
         if (!gpsWasLogging) {
-            btSend("GPS_FIX_VALID_START_LOGGING\r\n");
+        	piSend("GPS_FIX_VALID_START_LOGGING\r\n");
             startLogging();
             gpsWasLogging = true;
         }
     } else {
     	if(gpsWasLogging) {
-            btSend("GPS_FIX_INVALID_STOP_LOGGING\r\n");
+    		piSend("GPS_FIX_INVALID_STOP_LOGGING\r\n");
         	stopLogging();
     		gpsWasLogging = false;
             vTaskDelay(pdMS_TO_TICKS(1000));
@@ -55,9 +55,13 @@ static void gpsHandleFixStatus(const char *sentence)
     }
 }
 void taskGPS(void *pvParameters) {
+	static bool gpsStartedGuard = false;
     vTaskDelay(pdMS_TO_TICKS(100));
     gpsInit();
-    btSend("GPS_TASK_STARTED\r\n");
+    if (!gpsStartedGuard) {
+        piSend("GPS_TASK_STARTED\r\n");
+    	gpsStartedGuard = true;
+    }
     uint8_t ch;
     while (1) {
         if (HAL_UART_Receive(&huart3, &ch, 1, HAL_MAX_DELAY) == HAL_OK) {
@@ -94,6 +98,7 @@ static void gpsProcessByte(uint8_t ch) {
         latest_gps_line[GPS_BUF_RX_SIZE - 1] = '\0';
         latest_gps_line_ready = 1;
         gpsHandleFixStatus(gpsSentence);
+        piSend(gpsSentence);
         volatile int gpsRmcDetected = 1;
         (void)gpsRmcDetected;
     }
@@ -132,8 +137,8 @@ void stopLogging(){
 	sendCommand(PMTK_LOCUS_STOPLOG);
 }
 
-void btSend(const char *msg) {
-    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), 100);
+void piSend(const char *msg) {
+    HAL_UART_Transmit(&huart1, (uint8_t *)msg, strlen(msg), 100);
 }
 
 //Grabs all logged data and sends it over bluetooth
@@ -142,7 +147,7 @@ void dumpLogs()
 {
     uint8_t ch;
 
-    btSend("GPS_DUMP_START\r\n");
+    piSend("GPS_DUMP_START\r\n");
 
     sendCommand(PMTK_LOCUS_DUMPLOG);
 
@@ -150,9 +155,9 @@ void dumpLogs()
 
     while ((HAL_GetTick() - startTick) < 5000) {
         if (HAL_UART_Receive(&huart3, &ch, 1, 100) == HAL_OK) {
-            HAL_UART_Transmit(&huart2, &ch, 1, 100);
+            HAL_UART_Transmit(&huart1, &ch, 1, 100);
         }
     }
 
-    btSend("\r\nGPS_DUMP_END\r\n");
+    piSend("\r\nGPS_DUMP_END\r\n");
 }
