@@ -1,0 +1,7 @@
+../App/Src/postureApp.c:11:6:taskBT	16	static
+../App/Src/postureApp.c:30:6:taskIMU	16	static
+../App/Src/postureApp.c:42:6:taskGPS	16	static
+../App/Src/postureApp.c:51:6:sendCommand	16	static
+../App/Src/postureApp.c:56:6:HAL_UART_RxCpltCallback	24	static,ignoring_inline_asm
+../App/Src/postureApp.c:66:6:verifyCheckSum	24	static
+../App/Src/postureApp.c:76:6:HAL_UART_ErrorCallback	16	static

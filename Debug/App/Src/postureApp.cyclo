@@ -1,0 +1,7 @@
+../App/Src/postureApp.c:11:6:taskBT	3
+../App/Src/postureApp.c:30:6:taskIMU	2
+../App/Src/postureApp.c:42:6:taskGPS	1
+../App/Src/postureApp.c:51:6:sendCommand	1
+../App/Src/postureApp.c:56:6:HAL_UART_RxCpltCallback	3
+../App/Src/postureApp.c:66:6:verifyCheckSum	2
+../App/Src/postureApp.c:76:6:HAL_UART_ErrorCallback	3

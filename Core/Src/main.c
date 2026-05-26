@@ -23,9 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "task_imu.h"
-#include "task_gps.h"
-
+#include <postureApp.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,8 +64,9 @@ const osThreadAttr_t defaultTask_attributes = {
 /* USER CODE BEGIN PV */
 TaskHandle_t imuTask;
 TaskHandle_t gpsTask;
+TaskHandle_t btTask;
 
-SemaphoreHandle_t btMutex;
+SemaphoreHandle_t uartMutex;
 
 /* USER CODE END PV */
 
@@ -136,7 +135,7 @@ int main(void)
   osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  btMutex = xSemaphoreCreateMutex();
+  uartMutex = xSemaphoreCreateMutex();
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -156,8 +155,9 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  xTaskCreate(taskIMU, "Manages IMU data Tx", 16384, NULL, 1, &imuTask);
-  xTaskCreate(taskGPS, "Manages GPS Rx and Tx", 16384, NULL, 1, &gpsTask);
+  xTaskCreate(taskBT, "Bluetooth Task", 2048, NULL, 2, &btTask);
+  xTaskCreate(taskIMU, "Manages IMU data Tx", 2048, NULL, 1, &imuTask);
+  xTaskCreate(taskGPS, "Manages GPS Rx and Tx", 4096, NULL, 1, &gpsTask);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

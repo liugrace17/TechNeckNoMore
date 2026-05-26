@@ -22,7 +22,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "task_gps.h"
+#include <postureApp.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+uint16_t rxBufSize;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -63,8 +63,8 @@ extern TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN EV */
 extern UART_HandleTypeDef huart2;
-extern uint8_t gpsRxBuf[];
-extern TaskHandle_t gpsTask;
+extern uint8_t rxBuf[];
+extern TaskHandle_t btTask;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -227,9 +227,11 @@ void USART2_IRQHandler(){
     if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE))
     {
         __HAL_UART_CLEAR_IDLEFLAG(&huart2);
+        uint16_t numBytes = sizeof(rxBuf) - __HAL_DMA_GET_COUNTER(huart2.hdmarx);
+        rxBufSize = numBytes;
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        vTaskNotifyGiveFromISR(gpsTask, &xHigherPriorityTaskWoken);
-        HAL_UART_Receive_DMA(&huart2, gpsRxBuf, GPS_BUF_RX_SIZE);  // restart for next sentence
+        vTaskNotifyGiveFromISR(btTask, &xHigherPriorityTaskWoken);
+        HAL_UART_Receive_DMA(&huart2, rxBuf, POSS_BUF_SIZE);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 }
