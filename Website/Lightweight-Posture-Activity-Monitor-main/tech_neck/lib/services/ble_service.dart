@@ -41,8 +41,8 @@ class PiPayload {
 }
 
 class BleService {
-  static const String _serviceUuid = "12345678-1234-1234-1234-123456789abc";
-  static const String _charUuid    = "12345678-1234-1234-1234-123456789def";
+  static const String _serviceUuid = "66bffa4d-fdb1-4a44-9fcb-b19fa257b833";
+  static const String _charUuid    = "dbbcc4ab-0707-442b-a572-fbfdc5e9ebed";
 
   static final _payloadController = StreamController<PiPayload>.broadcast();
   static Stream<PiPayload> get stream => _payloadController.stream;
