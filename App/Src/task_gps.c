@@ -2,6 +2,7 @@
 #include <HardwareSerial.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 // =======================
 // ESP32 GPS UART SETTINGS
@@ -38,11 +39,51 @@ static bool gpsDumpActive = false;
 static bool gpsWasLogging = false;
 static bool gpsEverHadFix = false;
 static unsigned long gpsProcessdumpedTime = 5000;
+struct __attribute__((packed)) GpsPacket {
+  uint8_t startByte;   // 0xAA
+  float latitude;
+  float longitude;
+  uint8_t valid;
+  uint8_t checksum;
+};
+
+uint8_t calculateChecksum(uint8_t *data, size_t len) {
+  uint8_t cs = 0;
+
+  for (size_t i = 0; i < len; i++) {
+    cs ^= data[i];
+  }
+
+  return cs;
+}
+
+void sendGpsPacket(float lat, float lon, bool valid) {
+  GpsPacket packet;
+
+  packet.startByte = 0xAA;
+  packet.latitude = lat;
+  packet.longitude = lon;
+  packet.valid = valid ? 1 : 0;
+
+  packet.checksum = 0;
+  packet.checksum = calculateChecksum((uint8_t *)&packet, sizeof(GpsPacket) - 1);
+
+  PiUART.write((uint8_t *)&packet, sizeof(GpsPacket));
+
+  Serial.print("Sent GPS packet -> valid=");
+  Serial.print(packet.valid);
+  Serial.print(" lat=");
+  Serial.print(packet.latitude, 6);
+  Serial.print(" lon=");
+  Serial.println(packet.longitude, 6);
+}
 
 static void piSend(const char *msg);
 static void gpsProcessByte(uint8_t ch);
 static bool gpsIsRmcSentence(const char *sentence);
 static void gpsHandleFixStatus(const char *sentence);
+static bool parseRmcLatLon(const char *sentence, float *lat, float *lon, bool *valid);
+static float nmeaToDecimalDegrees(const char *nmeaCoord, char direction);
 
 // =======================
 // PMTK commands
@@ -119,12 +160,13 @@ static void gpsProcessByte(uint8_t ch) {
     latest_gps_line[GPS_BUF_RX_SIZE - 1] = '\0';
     latest_gps_line_ready = 1;
 
-    gpsHandleFixStatus(gpsSentence);
+  Serial.print("RMC sentence: ");
+  Serial.print(gpsSentence);
 
-    piSend(gpsSentence);
+  gpsHandleFixStatus(gpsSentence);
 
-    volatile int gpsRmcDetected = 1;
-    (void)gpsRmcDetected;
+  volatile int gpsRmcDetected = 1;
+  (void)gpsRmcDetected;
   }
 
   gpsSentenceIndex = 0;
@@ -144,46 +186,101 @@ static bool gpsIsRmcSentence(const char *sentence) {
 }
 
 static void gpsHandleFixStatus(const char *sentence) {
-  /*
-    Your STM32 code used minmea_parse_rmc() here.
-
-    For now, this keeps the same behavior:
-    RMC has:
-      A = valid GPS fix
-      V = invalid GPS fix
-
-    Example:
-      $GNRMC,....,A,...
-      $GNRMC,....,V,...
-  */
-
+  float lat = 0.0;
+  float lon = 0.0;
   bool rmcValid = false;
 
-  if (strstr(sentence, ",A,") != NULL) {
-    rmcValid = true;
+  bool parsed = parseRmcLatLon(sentence, &lat, &lon, &rmcValid);
+
+  if (!parsed) {
+    Serial.println("Failed to parse RMC sentence");
+    return;
   }
 
   if (rmcValid) {
     gpsEverHadFix = true;
 
     if (!gpsWasLogging) {
-      piSend("GPS_FIX_VALID_START_LOGGING\r\n");
+      Serial.println("GPS_FIX_VALID_START_LOGGING");
       startLogging();
       gpsWasLogging = true;
     }
-
   } else {
     if (gpsWasLogging) {
-      piSend("GPS_FIX_INVALID_STOP_LOGGING\r\n");
+      Serial.println("GPS_FIX_INVALID_STOP_LOGGING");
       stopLogging();
       gpsWasLogging = false;
-
 
       if (gpsEverHadFix) {
         dumpLogs();
       }
     }
   }
+
+  sendGpsPacket(lat, lon, rmcValid);
+}
+
+static float nmeaToDecimalDegrees(const char *nmeaCoord, char direction) {
+  if (nmeaCoord == NULL || strlen(nmeaCoord) < 4) {
+    return 0.0;
+  }
+
+  float raw = atof(nmeaCoord);
+
+  int degrees = (int)(raw / 100);
+  float minutes = raw - (degrees * 100);
+
+  float decimal = degrees + (minutes / 60.0);
+
+  if (direction == 'S' || direction == 'W') {
+    decimal *= -1.0;
+  }
+
+  return decimal;
+}
+
+static bool parseRmcLatLon(const char *sentence, float *lat, float *lon, bool *valid) {
+  if (sentence == NULL || lat == NULL || lon == NULL || valid == NULL) {
+    return false;
+  }
+
+  char buffer[GPS_BUF_RX_SIZE];
+  strncpy(buffer, sentence, GPS_BUF_RX_SIZE - 1);
+  buffer[GPS_BUF_RX_SIZE - 1] = '\0';
+
+  char *fields[16];
+  int fieldCount = 0;
+
+  char *token = strtok(buffer, ",");
+
+  while (token != NULL && fieldCount < 16) {
+    fields[fieldCount++] = token;
+    token = strtok(NULL, ",");
+  }
+
+  if (fieldCount < 7) {
+    return false;
+  }
+
+  char status = fields[2][0];
+
+  *valid = (status == 'A');
+
+  if (!(*valid)) {
+    *lat = 0.0;
+    *lon = 0.0;
+    return true;
+  }
+
+  if (strlen(fields[3]) == 0 || strlen(fields[4]) == 0 ||
+      strlen(fields[5]) == 0 || strlen(fields[6]) == 0) {
+    return false;
+  }
+
+  *lat = nmeaToDecimalDegrees(fields[3], fields[4][0]);
+  *lon = nmeaToDecimalDegrees(fields[5], fields[6][0]);
+
+  return true;
 }
 
 void gpsInit() {
