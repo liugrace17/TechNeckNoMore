@@ -1,13 +1,14 @@
 """
-Run with: sudo python pi_server.py
+FastAPI server — reads live state from uart_parser.py
+Run with: python ble.py
 """
 
-import time
 import threading
 import logging
 import uvicorn
-import bt_parser
-from bluezero import peripheral, adapter
+import uart_parser
+import gps_parser
+from bluezero import peripheral, adapter, async_tools
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -23,17 +24,30 @@ def encode(value: str) -> list:
     return list(value.encode('utf-8'))
 
 def payload_string() -> str:
-    with bt_parser.lock:
+    with uart_parser.lock:
         return (
-            f"{bt_parser.steps},"
-            f"{bt_parser.active_time},"
-            f"{bt_parser.posture_goal_percentage},"
-            f"{bt_parser.current_activity},"
-            f"{bt_parser.idle_streak},"
-            f"null,null"
+            f"{uart_parser.steps},"
+            f"{uart_parser.active_time},"
+            f"{uart_parser.posture_goal_percentage},"
+            f"{uart_parser.current_activity},"
+            f"{uart_parser.idle_streak},"
+            f"{gps_parser.latest_lat},"
+            f"{gps_parser.latest_lng}"
         )
 
-def run_ble():
+def read_value():
+    return encode(payload_string())
+
+def update_value(characteristic):
+    characteristic.set_value(encode(payload_string()))
+    logger.info(f"[BLE] pushed: {payload_string()}")
+    return True
+
+def notify_callback(notifying, characteristic):
+    if notifying:
+        async_tools.add_timer_seconds(1, update_value, characteristic)
+
+def main_ble():
     ble = adapter.Adapter()
     ble.powered = True
 
@@ -44,24 +58,21 @@ def run_ble():
     )
 
     pi_peripheral.add_service(srv_id=1, uuid=SERVICE_UUID, primary=True)
-
     pi_peripheral.add_characteristic(
         srv_id=1, chr_id=1, uuid=CHAR_UUID,
-        value=encode(payload_string()), notifying=False,
+        value=[], notifying=False,
         flags=['read', 'notify'],
-        read_callback=lambda: encode(payload_string()),
-        write_callback=None, notify_callback=None,
+        read_callback=read_value,
+        write_callback=None,
+        notify_callback=notify_callback,
     )
 
     pi_peripheral.publish()
     logger.info("BLE peripheral running...")
 
-    while True:
-        try:
-            pi_peripheral.update_characteristic(1, 1, encode(payload_string()))
-        except Exception:
-            pass
-        time.sleep(5)
+# ---------------------------------------------------------------------------
+# FastAPI
+# ---------------------------------------------------------------------------
 
 app = FastAPI()
 
@@ -83,39 +94,42 @@ class GpsPoint(BaseModel):
     lat: float
     lng: float
 
+class GpsStatus(BaseModel):
+    valid: int
+    lat: float
+    lng: float
+
 @app.on_event("startup")
 def start_bt():
-    threading.Thread(target=bt_parser.run, daemon=True).start()
+    threading.Thread(target=uart_parser.run, daemon=True).start()
 
 @app.get("/activity/summary", response_model=ActivitySummary)
 def get_activity_summary():
-    with bt_parser.lock:
+    with uart_parser.lock:
         return ActivitySummary(
-            steps=bt_parser.steps,
-            active_minutes=bt_parser.active_time,
-            posture_goal_percentage=bt_parser.posture_goal_percentage,
-            current_activity=bt_parser.current_activity,
-            idle_streak_minutes=bt_parser.idle_streak,
+            steps=uart_parser.steps,
+            active_minutes=uart_parser.active_time,
+            posture_goal_percentage=uart_parser.posture_goal_percentage,
+            current_activity=uart_parser.current_activity,
+            idle_streak_minutes=uart_parser.idle_streak,
+        )
+
+@app.get("/gps/latest", response_model=GpsStatus)
+def get_latest_gps():
+    with gps_parser.lock:
+        return GpsStatus(
+            valid=gps_parser.latest_valid,
+            lat=gps_parser.latest_lat,
+            lng=gps_parser.latest_lng,
         )
 
 @app.get("/gps/route", response_model=List[GpsPoint])
 def get_gps_route():
-    return [
-        GpsPoint(lat=46.8698, lng=-122.2609),
-        GpsPoint(lat=46.8712, lng=-122.2615),
-        GpsPoint(lat=46.8725, lng=-122.2601),
-        GpsPoint(lat=46.8731, lng=-122.2588),
-        GpsPoint(lat=46.8740, lng=-122.2572),
-        GpsPoint(lat=46.8748, lng=-122.2560),
-        GpsPoint(lat=46.8741, lng=-122.2545),
-        GpsPoint(lat=46.8730, lng=-122.2538),
-        GpsPoint(lat=46.8718, lng=-122.2542),
-        GpsPoint(lat=46.8705, lng=-122.2551),
-        GpsPoint(lat=46.8698, lng=-122.2565),
-        GpsPoint(lat=46.8694, lng=-122.2580),
-        GpsPoint(lat=46.8698, lng=-122.2609),
-    ]
+    with gps_parser.lock:
+        if len(gps_parser.route) > 0:
+            return [GpsPoint(lat=p["lat"], lng=p["lng"]) for p in gps_parser.route]
+        return [GpsPoint(lat=gps_parser.latest_lat, lng=gps_parser.latest_lng)]
 
 if __name__ == "__main__":
-    threading.Thread(target=run_ble, daemon=True).start()
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    threading.Thread(target=lambda: uvicorn.run(app, host="0.0.0.0", port=8000), daemon=True).start()
+    main_ble()
