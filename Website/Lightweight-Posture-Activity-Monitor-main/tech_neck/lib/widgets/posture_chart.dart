@@ -168,7 +168,7 @@ class PostureDonutChart extends StatelessWidget {
             const Spacer(),
             Text(
               '$steps steps / $goalSteps completed',
-              style: TextStyle(fontSize: 11, color: stepColor, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 7, color: stepColor, fontWeight: FontWeight.w700),
             ),
           ]),
           const SizedBox(height: 10),

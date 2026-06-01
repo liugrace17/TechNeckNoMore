@@ -276,13 +276,13 @@ class _IdleStreak extends StatelessWidget {
 
     if (minutes >= 15) {
       color = AppTheme.accentRed;
-      label = 'Long idle streak — time to move';
+      label = 'Time to move';
     } else if (minutes >= 5) {
       color = AppTheme.accent;
-      label = 'Idle streak building up';
+      label = 'Idle';
     } else {
       color = AppTheme.accentGreen;
-      label = 'Idle streak looks good';
+      label = 'Idle streak';
     }
 
     return Row(children: [
