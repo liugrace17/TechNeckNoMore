@@ -102,6 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       body: Column(children: [
+        const SizedBox(height: 32),
         _buildHeader(),
         if (!_loading && _error == null && _summary != null)
           ActivityIndicator(currentActivity: _summary!.currentActivity),
@@ -125,6 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppTheme.surface,
         border: Border(bottom: BorderSide(color: AppTheme.border)),
       ),
+    
       child: Row(children: [
         Container(
           width: 28, height: 28,
@@ -132,7 +134,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: const Icon(Icons.show_chart, color: Colors.black, size: 16),
         ),
         const SizedBox(width: 12),
-        const Text('PI TRACKER', style: TextStyle(
+        const Text('Tech Neck', style: TextStyle(
           fontSize: 15, fontWeight: FontWeight.w700,
           color: AppTheme.textPrimary, letterSpacing: 2,
         )),
@@ -191,26 +193,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         isWide
             ? Row(children: [
+                Expanded(child: PostureDonutChart(
+                  percentage: s.postureGoalPercentage,
+                  activeMinutes: s.activeMinutes,
+                  steps: s.steps,
+                )),
+                const SizedBox(width: 16),
                 Expanded(child: StatCard(
                   label: 'Steps',
                   value: s.steps.toString(),
                   icon: Icons.directions_walk_rounded,
                   accentColor: AppTheme.accent,
                 )),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(child: StatCard(
                   label: 'Active Time',
                   value: '${s.activeMinutes ~/ 60}h ${s.activeMinutes % 60}m',
                   icon: Icons.directions_run_rounded,
                   accentColor: AppTheme.accentGreen,
                   child: _IdleStreak(minutes: s.idleStreakMinutes),
-                )),
-                const SizedBox(width: 16),
-                Expanded(child: PostureDonutChart(
-                  percentage: s.postureGoalPercentage,
                 )),
               ])
             : Column(children: [
+                const SizedBox(height: 16),
+                PostureDonutChart(
+                  percentage: s.postureGoalPercentage,
+                  activeMinutes: s.activeMinutes,
+                  steps: s.steps,
+                ),
+                const SizedBox(height: 24),
                 StatCard(
                   label: 'Steps',
                   value: s.steps.toString(),
@@ -225,8 +236,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   accentColor: AppTheme.accentGreen,
                   child: _IdleStreak(minutes: s.idleStreakMinutes),
                 ),
-                const SizedBox(height: 16),
-                PostureDonutChart(percentage: s.postureGoalPercentage),
               ]),
         const SizedBox(height: 24),
         RouteMapWidget(httpPoints: _httpRoute, livePoints: _livePoints),
@@ -278,7 +287,7 @@ class _IdleStreak extends StatelessWidget {
 
     return Row(children: [
       Icon(Icons.timer_outlined, size: 12, color: color),
-      const SizedBox(width: 6),
+      const SizedBox(width: 2),
       Text(
         '$minutes min idle  ·  $label',
         style: TextStyle(fontSize: 11, color: color),

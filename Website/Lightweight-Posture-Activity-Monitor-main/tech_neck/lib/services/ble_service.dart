@@ -6,6 +6,8 @@ class PiPayload {
   final int steps;
   final int activeMinutes;
   final double postureGoalPercentage;
+  final String currentActivity;
+  final int idleStreakMinutes;
   final double? lat;
   final double? lng;
 
@@ -13,6 +15,8 @@ class PiPayload {
     required this.steps,
     required this.activeMinutes,
     required this.postureGoalPercentage,
+    required this.currentActivity,
+    required this.idleStreakMinutes,
     this.lat,
     this.lng,
   });
@@ -20,23 +24,25 @@ class PiPayload {
   bool get hasGps => lat != null && lng != null;
   LatLng? get position => hasGps ? LatLng(lat!, lng!) : null;
 
-  // Format: "steps,active_minutes,posture_pct,lat,lng"
+  // Format: "steps,active_minutes,posture_pct,current_activity,idle_streak,lat,lng"
   factory PiPayload.fromString(String raw) {
     final p = raw.trim().split(',');
-    if (p.length != 5) return PiPayload(steps: 0, activeMinutes: 0, postureGoalPercentage: 0);
+    if (p.length != 7) return PiPayload(steps: 0, activeMinutes: 0, postureGoalPercentage: 0, currentActivity: 'idle', idleStreakMinutes: 0);
     return PiPayload(
       steps:                 int.tryParse(p[0]) ?? 0,
       activeMinutes:         int.tryParse(p[1]) ?? 0,
       postureGoalPercentage: double.tryParse(p[2]) ?? 0,
-      lat:                   double.tryParse(p[3]),
-      lng:                   double.tryParse(p[4]),
+      currentActivity:       p[3],
+      idleStreakMinutes:      int.tryParse(p[4]) ?? 0,
+      lat:                   double.tryParse(p[5]),
+      lng:                   double.tryParse(p[6]),
     );
   }
 }
 
 class BleService {
-  static const String _serviceUuid = "66bffa4d-fdb1-4a44-9fcb-b19fa257b833";
-  static const String _charUuid    = "dbbcc4ab-0707-442b-a572-fbfdc5e9ebed";
+  static const String _serviceUuid = "12345678-1234-1234-1234-123456789abc";
+  static const String _charUuid    = "12345678-1234-1234-1234-123456789def";
 
   static final _payloadController = StreamController<PiPayload>.broadcast();
   static Stream<PiPayload> get stream => _payloadController.stream;
@@ -61,15 +67,22 @@ class BleService {
   static Future<void> _connect(BluetoothDevice device) async {
     _device = device;
     await device.connect(license: License.free);
+    print('[BLE] Connected to ${device.platformName}');
 
     final services = await device.discoverServices();
+    print('[BLE] Found ${services.length} services');
     for (final service in services) {
+      print('[BLE] Service: ${service.serviceUuid}');
       if (service.serviceUuid == Guid(_serviceUuid)) {
         for (final char in service.characteristics) {
+          print('[BLE] Characteristic: ${char.characteristicUuid}');
           if (char.characteristicUuid == Guid(_charUuid)) {
             await char.setNotifyValue(true);
-            _notifySub = char.lastValueStream.listen((bytes) {
-              final payload = PiPayload.fromString(String.fromCharCodes(bytes));
+            print('[BLE] Subscribed to notifications');
+            _notifySub = char.onValueReceived.listen((bytes) {
+              final raw = String.fromCharCodes(bytes);
+              print('[BLE] Raw payload: $raw');
+              final payload = PiPayload.fromString(raw);
               _payloadController.add(payload);
             });
           }
