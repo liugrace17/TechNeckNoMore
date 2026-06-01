@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/posture_chart.dart';
 import '../widgets/route_map.dart';
+import '../widgets/activity_indicator.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -40,7 +41,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _initMobile() async {
     setState(() {
-      _summary = ActivitySummary(steps: 0, standingMinutes: 0, postureGoalPercentage: 0);
+      _summary = ActivitySummary(
+        steps: 0,
+        activeMinutes: 0,
+        postureGoalPercentage: 0,
+        currentActivity: 'idle',
+        idleStreakMinutes: 0,
+      );
       _loading = false;
     });
 
@@ -48,8 +55,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _summary = ActivitySummary(
           steps: payload.steps,
-          standingMinutes: payload.activeMinutes,
+          activeMinutes: payload.activeMinutes,
           postureGoalPercentage: payload.postureGoalPercentage,
+          currentActivity: payload.currentActivity,
+          idleStreakMinutes: payload.idleStreakMinutes,
         );
       });
     });
@@ -94,6 +103,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: AppTheme.bg,
       body: Column(children: [
         _buildHeader(),
+        if (!_loading && _error == null && _summary != null)
+          ActivityIndicator(currentActivity: _summary!.currentActivity),
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
@@ -181,28 +192,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
         isWide
             ? Row(children: [
                 Expanded(child: StatCard(
-                  label: 'Steps', value: s.steps.toString(),
-                  icon: Icons.directions_walk_rounded, accentColor: AppTheme.accent,
+                  label: 'Steps',
+                  value: s.steps.toString(),
+                  icon: Icons.directions_walk_rounded,
+                  accentColor: AppTheme.accent,
                 )),
                 const SizedBox(width: 16),
                 Expanded(child: StatCard(
-                  label: 'Active',
-                  value: '${s.standingMinutes ~/ 60}h ${s.standingMinutes % 60}m',
-                  icon: Icons.airline_seat_recline_extra_rounded, accentColor: AppTheme.accentGreen,
+                  label: 'Active Time',
+                  value: '${s.activeMinutes ~/ 60}h ${s.activeMinutes % 60}m',
+                  icon: Icons.directions_run_rounded,
+                  accentColor: AppTheme.accentGreen,
+                  child: _IdleStreak(minutes: s.idleStreakMinutes),
                 )),
                 const SizedBox(width: 16),
-                Expanded(child: PostureDonutChart(percentage: s.postureGoalPercentage)),
+                Expanded(child: PostureDonutChart(
+                  percentage: s.postureGoalPercentage,
+                )),
               ])
             : Column(children: [
                 StatCard(
-                  label: 'Steps', value: s.steps.toString(),
-                  icon: Icons.directions_walk_rounded, accentColor: AppTheme.accent,
+                  label: 'Steps',
+                  value: s.steps.toString(),
+                  icon: Icons.directions_walk_rounded,
+                  accentColor: AppTheme.accent,
                 ),
                 const SizedBox(height: 16),
                 StatCard(
-                  label: 'Active',
-                  value: '${s.standingMinutes ~/ 60}h ${s.standingMinutes % 60}m',
-                  icon: Icons.airline_seat_recline_extra_rounded, accentColor: AppTheme.accentGreen,
+                  label: 'Active Time',
+                  value: '${s.activeMinutes ~/ 60}h ${s.activeMinutes % 60}m',
+                  icon: Icons.directions_run_rounded,
+                  accentColor: AppTheme.accentGreen,
+                  child: _IdleStreak(minutes: s.idleStreakMinutes),
                 ),
                 const SizedBox(height: 16),
                 PostureDonutChart(percentage: s.postureGoalPercentage),
@@ -231,6 +252,37 @@ class _GpsSourceIndicator extends StatelessWidget {
       const SizedBox(width: 4),
       Text(label, style: TextStyle(fontSize: 11, color: color)),
       const SizedBox(width: 12),
+    ]);
+  }
+}
+
+class _IdleStreak extends StatelessWidget {
+  final int minutes;
+  const _IdleStreak({required this.minutes});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color;
+    final String label;
+
+    if (minutes >= 15) {
+      color = AppTheme.accentRed;
+      label = 'Long idle streak — time to move';
+    } else if (minutes >= 5) {
+      color = AppTheme.accent;
+      label = 'Idle streak building up';
+    } else {
+      color = AppTheme.accentGreen;
+      label = 'Idle streak looks good';
+    }
+
+    return Row(children: [
+      Icon(Icons.timer_outlined, size: 12, color: color),
+      const SizedBox(width: 6),
+      Text(
+        '$minutes min idle  ·  $label',
+        style: TextStyle(fontSize: 11, color: color),
+      ),
     ]);
   }
 }

@@ -1,18 +1,24 @@
 class ActivitySummary {
   final int steps;
-  final int standingMinutes;
+  final int activeMinutes;
   final double postureGoalPercentage;
+  final String currentActivity;
+  final int idleStreakMinutes;
 
   ActivitySummary({
     required this.steps,
-    required this.standingMinutes,
+    required this.activeMinutes,
     required this.postureGoalPercentage,
+    required this.currentActivity,
+    required this.idleStreakMinutes,
   });
 
   factory ActivitySummary.fromJson(Map<String, dynamic> json) => ActivitySummary(
         steps: json['steps'],
-        standingMinutes: json['standing_minutes'],
+        activeMinutes: json['active_minutes'],
         postureGoalPercentage: (json['posture_goal_percentage'] as num).toDouble(),
+        currentActivity: json['current_activity'],
+        idleStreakMinutes: json['idle_streak_minutes'],
       );
 }
 

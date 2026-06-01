@@ -3,17 +3,56 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class PostureDonutChart extends StatelessWidget {
+<<<<<<< HEAD
   final double percentage; // 0–100, % of time at goal posture
 
   const PostureDonutChart({super.key, required this.percentage});
+=======
+  final double percentage;
+  final int activeMinutes;
+  final int walkingGoalMinutes;
+  final int steps;
+  final int goalSteps;
+
+  const PostureDonutChart({
+    super.key,
+    required this.percentage,
+    required this.activeMinutes,
+    this.walkingGoalMinutes = 5,
+    required this.steps,
+    this.goalSteps = 100,
+  });
+>>>>>>> espToStmToRpi
 
   @override
   Widget build(BuildContext context) {
     final good = percentage.clamp(0.0, 100.0);
     final poor = 100.0 - good;
+<<<<<<< HEAD
     final color = good >= 75 ? AppTheme.accentGreen
         : good >= 50 ? AppTheme.accent
         : AppTheme.accentRed;
+=======
+    final postureColor = good >= 75
+        ? AppTheme.accentGreen
+        : good >= 50
+            ? AppTheme.accent
+            : AppTheme.accentRed;
+
+    final walkProgress = (activeMinutes / walkingGoalMinutes).clamp(0.0, 1.0);
+    final walkColor = walkProgress >= 1.0
+        ? AppTheme.accentGreen
+        : walkProgress >= 0.5
+            ? AppTheme.accent
+            : AppTheme.accentRed;
+
+    final stepProgress = (steps / goalSteps).clamp(0.0, 1.0);
+    final stepColor = stepProgress >= 1.0
+        ? AppTheme.accentGreen
+        : stepProgress >= 0.5
+            ? AppTheme.accent
+            : AppTheme.accentRed;
+>>>>>>> espToStmToRpi
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -25,8 +64,14 @@ class PostureDonutChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+<<<<<<< HEAD
           Row(children: [
             Icon(Icons.accessibility_new_rounded, color: color, size: 16),
+=======
+          // Posture header
+          Row(children: [
+            Icon(Icons.accessibility_new_rounded, color: postureColor, size: 16),
+>>>>>>> espToStmToRpi
             const SizedBox(width: 8),
             const Text('POSTURE QUALITY', style: TextStyle(
               fontSize: 11, letterSpacing: 1.8,
@@ -34,6 +79,10 @@ class PostureDonutChart extends StatelessWidget {
             )),
           ]),
           const SizedBox(height: 16),
+<<<<<<< HEAD
+=======
+          // Donut chart + legend
+>>>>>>> espToStmToRpi
           Row(
             children: [
               SizedBox(
@@ -50,7 +99,11 @@ class PostureDonutChart extends StatelessWidget {
                         sections: [
                           PieChartSectionData(
                             value: good,
+<<<<<<< HEAD
                             color: color,
+=======
+                            color: postureColor,
+>>>>>>> espToStmToRpi
                             radius: 20,
                             showTitle: false,
                           ),
@@ -66,8 +119,14 @@ class PostureDonutChart extends StatelessWidget {
                     Text(
                       '${good.toStringAsFixed(0)}%',
                       style: TextStyle(
+<<<<<<< HEAD
                         fontSize: 20, fontWeight: FontWeight.w700,
                         color: color,
+=======
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: postureColor,
+>>>>>>> espToStmToRpi
                       ),
                     ),
                   ],
@@ -78,20 +137,97 @@ class PostureDonutChart extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+<<<<<<< HEAD
                     _Legend(color: color, label: 'At goal posture', value: '${good.toStringAsFixed(0)}%'),
+=======
+                    _Legend(color: postureColor, label: 'At goal posture', value: '${good.toStringAsFixed(0)}%'),
+>>>>>>> espToStmToRpi
                     const SizedBox(height: 10),
                     _Legend(color: AppTheme.border, label: 'Poor posture', value: '${poor.toStringAsFixed(0)}%'),
                     const SizedBox(height: 16),
                     Text(
                       good >= 75 ? '✓ On track' : good >= 50 ? '~ Close to goal' : '✗ Needs attention',
+<<<<<<< HEAD
                       style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700),
                     ),
                     Text('Goal: 75%', style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+=======
+                      style: TextStyle(fontSize: 12, color: postureColor, fontWeight: FontWeight.w700),
+                    ),
+                    const Text('Goal: 75%', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+>>>>>>> espToStmToRpi
                   ],
                 ),
               ),
             ],
           ),
+<<<<<<< HEAD
+=======
+          const SizedBox(height: 16),
+          const Divider(color: AppTheme.border, height: 1),
+          const SizedBox(height: 16),
+          // Active minutes goal
+          Row(children: [
+            Icon(Icons.directions_run_rounded, color: walkColor, size: 16),
+            const SizedBox(width: 8),
+            const Text('ACTIVE GOAL', style: TextStyle(
+              fontSize: 11, letterSpacing: 1.8,
+              color: AppTheme.textSecondary, fontWeight: FontWeight.w700,
+            )),
+            const Spacer(),
+            Text(
+              '$activeMinutes / ${walkingGoalMinutes}min',
+              style: TextStyle(fontSize: 11, color: walkColor, fontWeight: FontWeight.w700),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: walkProgress,
+              backgroundColor: AppTheme.border,
+              valueColor: AlwaysStoppedAnimation<Color>(walkColor),
+              minHeight: 6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            walkProgress >= 1.0 ? '✓ Daily goal met' : '${((1 - walkProgress) * walkingGoalMinutes).round()} min remaining',
+            style: TextStyle(fontSize: 11, color: walkProgress >= 1.0 ? AppTheme.accentGreen : AppTheme.textMuted),
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: AppTheme.border, height: 1),
+          const SizedBox(height: 16),
+          // Step count goal
+          Row(children: [
+            Icon(Icons.directions_walk_rounded, color: stepColor, size: 16),
+            const SizedBox(width: 8),
+            const Text('STEP GOAL', style: TextStyle(
+              fontSize: 11, letterSpacing: 1.8,
+              color: AppTheme.textSecondary, fontWeight: FontWeight.w700,
+            )),
+            const Spacer(),
+            Text(
+              '$steps steps / $goalSteps completed',
+              style: TextStyle(fontSize: 11, color: stepColor, fontWeight: FontWeight.w700),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: stepProgress,
+              backgroundColor: AppTheme.border,
+              valueColor: AlwaysStoppedAnimation<Color>(stepColor),
+              minHeight: 6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            stepProgress >= 1.0 ? '✓ Daily goal met' : '${goalSteps - steps} steps remaining',
+            style: TextStyle(fontSize: 11, color: stepProgress >= 1.0 ? AppTheme.accentGreen : AppTheme.textMuted),
+          ),
+>>>>>>> espToStmToRpi
         ],
       ),
     );
@@ -118,4 +254,8 @@ class _Legend extends StatelessWidget {
       ],
     );
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> espToStmToRpi

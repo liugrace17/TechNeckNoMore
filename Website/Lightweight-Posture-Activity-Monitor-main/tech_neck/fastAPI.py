@@ -1,8 +1,11 @@
 """
-Raspberry Pi Mock FastAPI Server
-Run with: pip install fastapi uvicorn
-Then: uvicorn pi_server:app --reload
+FastAPI server — reads live state from bt_parser.py and gps_parser.py
+Run with: uvicorn fastAPI:app --host 0.0.0.0 --port 8000
 """
+
+import threading
+import bt_parser
+import gps_parser
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,43 +22,36 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
+# Start Bluetooth + GPS listeners on startup
+# ---------------------------------------------------------------------------
+
+@app.on_event("startup")
+def start_bt():
+    t = threading.Thread(target=bt_parser.run, daemon=True)
+    t.start()
+
+    gps_t = threading.Thread(target=gps_parser.run, daemon=True)
+    gps_t.start()
+
+# ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
 
 class ActivitySummary(BaseModel):
     steps: int
-    standing_minutes: int
+    active_minutes: int
     posture_goal_percentage: float
+    current_activity: str
+    idle_streak_minutes: int
 
 class GpsPoint(BaseModel):
     lat: float
     lng: float
 
-# ---------------------------------------------------------------------------
-# Hardcoded mock data
-# ---------------------------------------------------------------------------
-
-SUMMARY = ActivitySummary(
-    steps=8432,
-    standing_minutes=214,
-    posture_goal_percentage=68.5,
-)
-
-GPS_ROUTE = [
-    GpsPoint(lat=46.8698, lng=-122.2609),
-    GpsPoint(lat=46.8712, lng=-122.2615),
-    GpsPoint(lat=46.8725, lng=-122.2601),
-    GpsPoint(lat=46.8731, lng=-122.2588),
-    GpsPoint(lat=46.8740, lng=-122.2572),
-    GpsPoint(lat=46.8748, lng=-122.2560),
-    GpsPoint(lat=46.8741, lng=-122.2545),
-    GpsPoint(lat=46.8730, lng=-122.2538),
-    GpsPoint(lat=46.8718, lng=-122.2542),
-    GpsPoint(lat=46.8705, lng=-122.2551),
-    GpsPoint(lat=46.8698, lng=-122.2565),
-    GpsPoint(lat=46.8694, lng=-122.2580),
-    GpsPoint(lat=46.8698, lng=-122.2609),
-]
+class GpsStatus(BaseModel):
+    valid: int
+    lat: float
+    lng: float
 
 # ---------------------------------------------------------------------------
 # Routes
@@ -63,8 +59,39 @@ GPS_ROUTE = [
 
 @app.get("/activity/summary", response_model=ActivitySummary)
 def get_activity_summary():
-    return SUMMARY
+    with bt_parser.lock:
+        return ActivitySummary(
+            steps=bt_parser.steps,
+            active_minutes=bt_parser.active_time,
+            posture_goal_percentage=bt_parser.posture_goal_percentage,
+            current_activity=bt_parser.current_activity,
+            idle_streak_minutes=bt_parser.idle_streak,
+        )
+
+@app.get("/gps/latest", response_model=GpsStatus)
+def get_latest_gps():
+    with gps_parser.lock:
+        return GpsStatus(
+            valid=gps_parser.latest_valid,
+            lat=gps_parser.latest_lat,
+            lng=gps_parser.latest_lng,
+        )
 
 @app.get("/gps/route", response_model=List[GpsPoint])
 def get_gps_route():
-    return GPS_ROUTE
+    with gps_parser.lock:
+        # If we have a real GPS route, use it
+        if len(gps_parser.route) > 0:
+            return [GpsPoint(lat=p["lat"], lng=p["lng"]) for p in gps_parser.route]
+
+        # If route has not built yet but latest GPS is valid, show latest point
+        if gps_parser.latest_valid == 1:
+            return [
+                GpsPoint(
+                    lat=gps_parser.latest_lat,
+                    lng=gps_parser.latest_lng,
+                )
+            ]
+
+        # If GPS has no fix yet, return empty route
+        return []

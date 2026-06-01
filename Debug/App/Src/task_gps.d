@@ -45,7 +45,8 @@ App/Src/task_gps.o: ../App/Src/task_gps.c ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
- ../App/Inc/gps_pmtk.h ../Drivers/minmea/minmea.h
+ ../App/Inc/task_imu.h ../App/Inc/task_gps.h ../App/Inc/gps_pmtk.h \
+ ../Drivers/minmea/minmea.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -93,5 +94,7 @@ App/Src/task_gps.o: ../App/Src/task_gps.c ../Core/Inc/main.h \
 ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
+../App/Inc/task_imu.h:
+../App/Inc/task_gps.h:
 ../App/Inc/gps_pmtk.h:
 ../Drivers/minmea/minmea.h:

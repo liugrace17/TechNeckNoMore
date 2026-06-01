@@ -44,6 +44,7 @@ App/Src/task_imu.o: ../App/Src/task_imu.c ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
+ ../App/Inc/task_gps.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
@@ -91,4 +92,5 @@ App/Src/task_imu.o: ../App/Src/task_imu.c ../Core/Inc/main.h \
 ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h:
+../App/Inc/task_gps.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:

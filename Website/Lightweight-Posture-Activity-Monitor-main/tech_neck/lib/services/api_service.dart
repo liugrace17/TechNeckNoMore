@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'http://10.19.76.198:8000';
 
   static Future<ActivitySummary> getActivitySummary() async {
     final response = await http.get(Uri.parse('$baseUrl/activity/summary'));
